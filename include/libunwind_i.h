@@ -72,19 +72,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #else
 # define __LITTLE_ENDIAN	1234
 # define __BIG_ENDIAN		4321
-# if defined(__hpux)
-#   define __BYTE_ORDER __BIG_ENDIAN
-# elif defined(__QNX__)
-#   if defined(__BIGENDIAN__)
-#     define __BYTE_ORDER __BIG_ENDIAN
-#   elif defined(__LITTLEENDIAN__)
-#     define __BYTE_ORDER __LITTLE_ENDIAN
-#   else
-#     error Host has unknown byte-order.
-#   endif
-# else
-#   error Host has unknown byte-order.
-# endif
+# if IS_BIG_ENDIAN
+#  define __BYTE_ORDER __BIG_ENDIAN
+# else // IS_BIG_ENDIAN
+#  define __BYTE_ORDER __LITTLE_ENDIAN
+# endif // IS_BIG_ENDIAN
 #endif
 
 #if defined(HAVE__BUILTIN_UNREACHABLE)
