@@ -362,12 +362,13 @@ struct dwarf_callback_data
   {
     /* in: */
     unw_word_t ip;		/* instruction-pointer we're looking for */
-    unw_proc_info_t *pi;	/* proc-info pointer */
     int need_unwind_info;
+    void *arg;
     /* out: */
-    int single_fde;		/* did we find a single FDE? (vs. a table) */
-    unw_dyn_info_t di;		/* table info (if single_fde is false) */
-    unw_dyn_info_t di_debug;	/* additional table info for .debug_frame */
+    unw_word_t fde_addr;
+    unw_word_t fde_base;
+    unw_word_t ip_offset;
+    unw_word_t gp;
   };
 
 /* Convenience macros: */
@@ -427,7 +428,8 @@ extern int dwarf_read_encoded_pointer (unw_addr_space_t as,
 				       unw_accessors_t *a,
 				       unw_word_t *addr,
 				       unsigned char encoding,
-				       const unw_proc_info_t *pi,
+                       unw_word_t gp,
+                       unw_word_t start_ip,
 				       unw_word_t *valp, void *arg);
 extern int dwarf_step (struct dwarf_cursor *c);
 
