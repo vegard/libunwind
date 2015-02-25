@@ -101,6 +101,7 @@ typedef enum
     UNW_PPC64_R29,
     UNW_PPC64_R30,
     UNW_PPC64_R31, /* called HARD_FRAME_POINTER in gcc */
+    UNW_PPC64_FRAME_POINTER = UNW_PPC64_R31,
 
     UNW_PPC64_NIP = 32,
     UNW_PPC64_MSR = 33,
