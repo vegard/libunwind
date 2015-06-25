@@ -248,11 +248,6 @@ typedef enum
   }
 ppc64_abi_t;
 
-#include "dwarf-config.h"
-#if DWARF_NUM_PRESERVED_REGS != UNW_PPC64_REGS_AMOUNT
-#error DWARF_NUM_PRESERVED_REGS must be equal to UNW_PPC64_REGS_AMOUNT
-#endif
-
 /*
  * This needs to be big enough to accommodate "struct cursor", while
  * leaving some slack for future expansion.  Changing this value will
