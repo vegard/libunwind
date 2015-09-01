@@ -40,7 +40,7 @@ aarch64_local_resume (unw_addr_space_t as, unw_cursor_t *cursor, void *arg)
     {
       /* Since there are no signals involved here we restore EH and non scratch
          registers only.  */
-      unsigned long regs[15];
+      unsigned long regs[16];
       regs[0] = uc->uc_mcontext.regs[0];
       regs[1] = uc->uc_mcontext.regs[1];
       regs[2] = uc->uc_mcontext.regs[2];
@@ -55,7 +55,8 @@ aarch64_local_resume (unw_addr_space_t as, unw_cursor_t *cursor, void *arg)
       regs[11] = uc->uc_mcontext.regs[26];
       regs[12] = uc->uc_mcontext.regs[27];
       regs[13] = uc->uc_mcontext.regs[28];
-      regs[14] = uc->uc_mcontext.regs[30]; /* LR */
+      regs[14] = uc->uc_mcontext.regs[29]; /* FP */
+      regs[15] = uc->uc_mcontext.regs[30]; /* LR */
       unsigned long sp = uc->uc_mcontext.sp;
 
       struct regs_overlay {
@@ -72,7 +73,7 @@ aarch64_local_resume (unw_addr_space_t as, unw_cursor_t *cursor, void *arg)
         "ldp x23, x24, [x4,64]\n"
         "ldp x25, x26, [x4,80]\n"
         "ldp x27, x28, [x4,96]\n"
-        "ldr x30, [x4,112]\n"
+        "ldp x29, x30, [x4,112]\n"
         "mov sp, x5\n"
         "ret \n"
         :
