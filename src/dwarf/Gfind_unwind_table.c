@@ -44,7 +44,6 @@ dwarf_find_unwind_table (struct elf_dyn_info *edi, unw_addr_space_t as,
   unw_word_t start_ip = (unw_word_t) -1;
   unw_word_t end_ip = 0;
   struct dwarf_eh_frame_hdr *hdr;
-  unw_proc_info_t pi;
   unw_accessors_t *a;
   Elf_W(Ehdr) *ehdr;
 #if UNW_TARGET_ARM
@@ -139,22 +138,15 @@ dwarf_find_unwind_table (struct elf_dyn_info *edi, unw_addr_space_t as,
       a = unw_get_accessors (unw_local_addr_space);
       addr = (unw_word_t) (hdr + 1);
 
-      /* Fill in a dummy proc_info structure.  We just need to fill in
-         enough to ensure that dwarf_read_encoded_pointer() can do it's
-         job.  Since we don't have a procedure-context at this point, all
-         we have to do is fill in the global-pointer.  */
-      memset (&pi, 0, sizeof (pi));
-      pi.gp = edi->di_cache.gp;
-
       /* (Optionally) read eh_frame_ptr: */
       if ((ret = dwarf_read_encoded_pointer (unw_local_addr_space, a,
-                                             &addr, hdr->eh_frame_ptr_enc, &pi,
+                                             &addr, hdr->eh_frame_ptr_enc, edi->di_cache.gp, 0,
                                              &eh_frame_start, NULL)) < 0)
         return -UNW_ENOINFO;
 
       /* (Optionally) read fde_count: */
       if ((ret = dwarf_read_encoded_pointer (unw_local_addr_space, a,
-                                             &addr, hdr->fde_count_enc, &pi,
+                                             &addr, hdr->fde_count_enc, edi->di_cache.gp, 0,
                                              &fde_count, NULL)) < 0)
         return -UNW_ENOINFO;
 
