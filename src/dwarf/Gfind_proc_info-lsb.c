@@ -681,6 +681,7 @@ search_fde_in_eh_frame(unw_word_t ip, unw_word_t hdr_addr, unw_word_t gp,
 	}
 }
 
+#ifdef HAVE_DL_ITERATE_PHDR
 
 /* ptr is a pointer to a dwarf_callback_data structure and, on entry,
    member ip contains the instruction-pointer we're looking
@@ -815,6 +816,52 @@ find_proc_fde (unw_word_t ip, unw_word_t *fde_addr,
 
   return 0;
 }
+
+#else // HAVE_DL_ITERATE_PHDR
+
+static int
+find_proc_fde(unw_word_t ip, unw_word_t *fde_addr,
+              unw_word_t *gp, unw_word_t *fde_base,
+              unw_word_t *ip_offset, void *arg) {
+  Dl_amd64_unwindinfo dlef;
+  void* data;
+  void* data_end;
+  int fp_enc, fc_enc, ft_enc;
+  unsigned char *pi, *pj;
+  ptrdiff_t reloc;
+  uintptr_t base;
+  int ret;
+  
+  dlef.dlui_version = 1;
+  
+  /* Locate the appropiate exception_range_entry table first */
+  if (0 == dlamd64getunwind((void*)ip, &dlef)) {
+    return -UNW_ENOINFO;
+  }
+  
+  /*
+   * you now know size and position of block of data needed for
+   * binary search ??REMOTE??
+   */
+  data = dlef.dlui_unwindstart;
+  if (0 == data)
+  	return -UNW_ENOINFO;
+
+  base = (uintptr_t)data;
+  data_end = dlef.dlui_unwindend;
+  reloc = 0;
+  /* ??REMOTE?? */
+
+  *gp = 0;
+  *fde_base = 0;
+  *ip_offset = 0;
+
+  return search_fde_in_eh_frame(ip, (unw_word_t)data, 0,
+                                (unw_word_t)data_end, fde_addr, arg, 0,
+                                dlef.dlui_objname);
+}
+
+#endif // HAVE_DL_ITERATE_PHDR
 
 HIDDEN int
 dwarf_find_proc_info (unw_addr_space_t as, unw_word_t ip,
