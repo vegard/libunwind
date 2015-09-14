@@ -69,6 +69,13 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 # define unlikely(x)    (x)
 #endif
 
+#if 0
+#ifdef __KERNEL__
+#undef HIDDEN
+#define HIDDEN
+#endif
+#endif
+
 #define ARRAY_SIZE(a)   (sizeof (a) / sizeof ((a)[0]))
 
 #endif /* COMPILER_H */

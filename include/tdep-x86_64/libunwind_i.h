@@ -31,7 +31,14 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 /* Target-dependent definitions that are internal to libunwind but need
    to be shared with target-independent code.  */
 
+#ifdef __KERNEL__
+#include <linux/bug.h>
+
+#define abort BUG
+#define assert(cond) BUG_ON(!(cond))
+#else
 #include <stdlib.h>
+#endif
 #include <libunwind.h>
 
 #include "elf64.h"

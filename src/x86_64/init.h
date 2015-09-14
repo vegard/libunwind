@@ -46,6 +46,7 @@ common_init (struct cursor *c, unsigned use_prev_instr)
 {
   int ret;
 
+Debug(1, "entered\n");
   c->dwarf.loc[RAX] = REG_INIT_LOC(c, rax, RAX);
   c->dwarf.loc[RDX] = REG_INIT_LOC(c, rdx, RDX);
   c->dwarf.loc[RCX] = REG_INIT_LOC(c, rcx, RCX);
@@ -85,5 +86,6 @@ common_init (struct cursor *c, unsigned use_prev_instr)
   c->dwarf.hint = 0;
   c->dwarf.prev_rs = 0;
 
+Debug(1, "success\n");
   return 0;
 }

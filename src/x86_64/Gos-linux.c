@@ -28,7 +28,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #include "unwind_i.h"
 #include "ucontext_i.h"
 
+#ifdef __KERNEL__
+#else
 #include <sys/syscall.h>
+#endif
 
 HIDDEN void
 tdep_fetch_frame (struct dwarf_cursor *dw, unw_word_t ip, int need_unwind_info)
@@ -108,6 +111,7 @@ x86_64_r_uc_addr (ucontext_t *uc, int reg)
   /* NOTE: common_init() in init.h inlines these for fast path access. */
   void *addr;
 
+Debug(1, "reg = %u\n", reg);
   switch (reg)
     {
     case UNW_X86_64_R8: addr = &uc->uc_mcontext.gregs[REG_R8]; break;
@@ -129,6 +133,7 @@ x86_64_r_uc_addr (ucontext_t *uc, int reg)
     case UNW_X86_64_RIP: addr = &uc->uc_mcontext.gregs[REG_RIP]; break;
 
     default:
+Debug(1, "returning NULL\n");
       addr = NULL;
     }
   return addr;
@@ -138,6 +143,9 @@ x86_64_r_uc_addr (ucontext_t *uc, int reg)
 HIDDEN NORETURN void
 x86_64_sigreturn (unw_cursor_t *cursor)
 {
+#ifdef __KERNEL__
+	BUG();
+#else
   struct cursor *c = (struct cursor *) cursor;
   struct sigcontext *sc = (struct sigcontext *) c->sigcontext_addr;
 
@@ -149,6 +157,7 @@ x86_64_sigreturn (unw_cursor_t *cursor)
                         :: "r"(sc), "i"(SYS_rt_sigreturn)
                         : "memory");
   abort();
+#endif
 }
 
 #endif

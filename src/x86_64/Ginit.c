@@ -30,9 +30,13 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #include <config.h>
 #endif
 
+#ifdef __KERNEL__
+#include <linux/string.h>
+#else
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#endif
 
 #include "unwind_i.h"
 
@@ -68,20 +72,30 @@ get_dyn_info_list_addr (unw_addr_space_t as, unw_word_t *dyn_info_list_addr,
   return 0;
 }
 
+#ifndef __KERNEL__
 #define PAGE_SIZE 4096
+#endif
 #define PAGE_START(a)   ((a) & ~(PAGE_SIZE-1))
 
 static int (*mem_validate_func) (void *addr, size_t len);
 static int msync_validate (void *addr, size_t len)
 {
+#ifdef __KERNEL__
+	//BUG();
+#else
   return msync (addr, len, MS_ASYNC);
+#endif
 }
 
 #ifdef HAVE_MINCORE
 static int mincore_validate (void *addr, size_t len)
 {
+#ifdef __KERNEL__
+	//BUG();
+#else
   unsigned char mvec[2]; /* Unaligned access may cross page boundary */
   return mincore (addr, len, mvec);
+#endif
 }
 #endif
 
@@ -244,14 +258,22 @@ get_static_proc_name (unw_addr_space_t as, unw_word_t ip,
                       char *buf, size_t buf_len, unw_word_t *offp,
                       void *arg)
 {
+#ifdef __KERNEL__
+	BUG();
+#else
   return _Uelf64_get_proc_name (as, getpid (), ip, buf, buf_len, offp);
+#endif
 }
 
 HIDDEN void
 x86_64_local_addr_space_init (void)
 {
   memset (&local_addr_space, 0, sizeof (local_addr_space));
+#ifdef __KERNEL__
+  local_addr_space.caching_policy = UNW_CACHE_NONE;
+#else
   local_addr_space.caching_policy = UNW_CACHE_GLOBAL;
+#endif
   local_addr_space.acc.find_proc_info = dwarf_find_proc_info;
   local_addr_space.acc.put_unwind_info = put_unwind_info;
   local_addr_space.acc.get_dyn_info_list_addr = get_dyn_info_list_addr;

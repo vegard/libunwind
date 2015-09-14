@@ -58,12 +58,16 @@ _Ux86_64_getcontext:
 	movq %rcx, UC_MCONTEXT_GREGS_RCX(%rdi)
 
 #if defined __linux__
+#ifdef __KERNEL__
+	/* The kernel doesn't have fp state */
+#else
 	/* Save fp state (not needed, except for setcontext not
 	   restoring garbage).  */
 	leaq UC_MCONTEXT_FPREGS_MEM(%rdi),%r8
 	movq %r8, UC_MCONTEXT_FPREGS_PTR(%rdi)
 	fnstenv (%r8)
 	stmxcsr FPREGS_OFFSET_MXCSR(%r8)
+#endif
 #elif defined __FreeBSD__
 	fxsave UC_MCONTEXT_FPSTATE(%rdi)
 	movq $UC_MCONTEXT_FPOWNED_FPU,UC_MCONTEXT_OWNEDFP(%rdi)

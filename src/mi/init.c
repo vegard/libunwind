@@ -44,6 +44,9 @@ HIDDEN void
 mi_init (void)
 {
 #if UNW_DEBUG
+#ifdef __KERNEL__
+	unwi_debug_level = 10000;
+#else
   const char *str = getenv ("UNW_DEBUG_LEVEL");
 
   if (str)
@@ -54,6 +57,7 @@ mi_init (void)
       setbuf (stdout, NULL);
       setbuf (stderr, NULL);
     }
+#endif
 #endif
 
   assert (sizeof (struct cursor) <= sizeof (unw_cursor_t));

@@ -26,9 +26,20 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 /* Locate an FDE via the ELF data-structures defined by LSB v1.3
    (http://www.linuxbase.org/spec/).  */
 
+#ifdef __KERNEL__
+#include <asm/sections.h>
+#include <uapi/linux/elf.h>
+
+/* From arch/x86/tools/relocs.c */
+#define ElfW(type)              _ElfW(64, type)
+#define _ElfW(bits, type)       __ElfW(bits, type)
+#define __ElfW(bits, type)      Elf##bits##_##type
+
+#else
 #include <stddef.h>
 #include <stdio.h>
 #include <limits.h>
+#endif
 
 #include "dwarf_i.h"
 #include "dwarf-eh.h"
@@ -579,6 +590,12 @@ dwarf_callback (struct dl_phdr_info *info, size_t size, void *ptr)
       else if (phdr->p_type == PT_DYNAMIC)
         p_dynamic = phdr;
     }
+
+#ifdef __KERNEL__
+	Debug(1, "p_text = %p\n", p_text);
+	Debug(1, "p_eh_hdr = %p\n", p_eh_hdr);
+	Debug(1, "p_dynamic = %p\n", p_dynamic);
+#endif
   
   if (!p_text)
     return 0;
@@ -708,10 +725,44 @@ dwarf_callback (struct dl_phdr_info *info, size_t size, void *ptr)
   return found;
 }
 
+#ifdef __KERNEL__
+int dl_iterate_phdr(int (*callback)(struct dl_phdr_info *, size_t, void *), struct dwarf_callback_data *cb_data)
+{
+	/* From fs/proc/kcore.c */
+	ElfW(Phdr) phdr[2];
+
+	/* _text to _end */
+	phdr[0].p_type = PT_LOAD;
+	phdr[0].p_vaddr = _text;
+	phdr[0].p_filesz = _end - _text;
+	phdr[0].p_memsz = _end - _text;
+	phdr[0].p_align = PAGE_SIZE;
+
+	phdr[1].p_type = PT_GNU_EH_FRAME;
+	phdr[1].p_vaddr = __eh_frame_hdr_start;
+	phdr[1].p_filesz = __eh_frame_hdr_end - __eh_frame_hdr_start;
+	phdr[1].p_memsz = __eh_frame_hdr_end - __eh_frame_hdr_start;
+	phdr[1].p_align = PAGE_SIZE;
+
+	struct dl_phdr_info info;
+	info.dlpi_addr = 0;
+	info.dlpi_name = "kernel";
+	info.dlpi_phdr = &phdr[0];
+	info.dlpi_phnum = sizeof(phdr) / sizeof(*phdr);
+
+	if (callback(&info, sizeof(info), (void *) cb_data))
+		return 1;
+
+	/* TODO: modules */
+	return 0;
+}
+#endif
+
 HIDDEN int
 dwarf_find_proc_info (unw_addr_space_t as, unw_word_t ip,
                       unw_proc_info_t *pi, int need_unwind_info, void *arg)
 {
+#ifdef __KERNEL__
   struct dwarf_callback_data cb_data;
   intrmask_t saved_mask;
   int ret;
@@ -750,6 +801,7 @@ dwarf_find_proc_info (unw_addr_space_t as, unw_word_t ip,
     ret = dwarf_search_unwind_table (as, ip, &cb_data.di_debug, pi,
                                      need_unwind_info, arg);
   return ret;
+#endif
 }
 
 static inline const struct table_entry *
@@ -842,6 +894,9 @@ dwarf_search_unwind_table (unw_addr_space_t as, unw_word_t ip,
 #endif
   assert (ip >= di->start_ip && ip < di->end_ip);
 
+  Debug (15, "ip=0x%lx, start_ip=0x%lx, end_ip=0x%lx\n",
+         (long) ip, (long) (di->start_ip), (long) (di->end_ip));
+
   if (di->format == UNW_INFO_FORMAT_REMOTE_TABLE)
     {
       table = (const struct table_entry *) (uintptr_t) di->u.rti.table_data;
@@ -919,6 +974,9 @@ dwarf_search_unwind_table (unw_addr_space_t as, unw_word_t ip,
       pi->flags = UNW_PI_FLAG_DEBUG_FRAME;
     }
 
+#ifdef __KERNEL__
+Debug(1, "ip=0x%lx start_ip=0x%lx end_ip=0x%lx\n", ip, pi->start_ip, pi->end_ip);
+#endif
   if (ip < pi->start_ip || ip >= pi->end_ip)
     return -UNW_ENOINFO;
 

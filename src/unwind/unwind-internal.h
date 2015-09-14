@@ -29,7 +29,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #define UNW_LOCAL_ONLY
 
 #include <unwind.h>
+#ifndef __KERNEL__
 #include <stdlib.h>
+#endif
 #include <libunwind.h>
 
 #include "libunwind_i.h"

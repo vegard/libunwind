@@ -45,6 +45,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 _Ux86_64_setcontext:
 
 #if defined __linux__
+#ifdef __KERNEL__
+	/* The kernel doesn't have sigprocmask or fp state */
+#else
 	/* restore signal mask
            sigprocmask(SIG_SETMASK, ucp->uc_sigmask, NULL, sizeof(sigset_t)) */
 	push %rdi
@@ -60,6 +63,7 @@ _Ux86_64_setcontext:
 	mov    UC_MCONTEXT_FPREGS_PTR(%rdi),%r8
 	fldenv (%r8)
 	ldmxcsr FPREGS_OFFSET_MXCSR(%r8)
+#endif
 #elif defined __FreeBSD__
 	/* restore signal mask */
 	pushq	%rdi

@@ -25,6 +25,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
 #include "libunwind_i.h"
 
+#ifdef __KERNEL__
+#include <linux/slab.h>
+
+#define free kfree
+#endif
+
 PROTECTED void
 unw_destroy_addr_space (unw_addr_space_t as)
 {

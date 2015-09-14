@@ -32,9 +32,13 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 extern "C" {
 #endif
 
+#ifdef __KERNEL__
+#include <linux/types.h>
+#else
 #include <sys/types.h>
 #include <inttypes.h>
 #include <ucontext.h>
+#endif
 
 #define UNW_TARGET              x86_64
 #define UNW_TARGET_X86_64       1
@@ -115,6 +119,107 @@ typedef struct unw_tdep_save_loc
   }
 unw_tdep_save_loc_t;
 
+#ifdef __KERNEL__
+
+#if 0
+#include <asm/signal.h>
+#include <asm/ucontext.h>
+
+typedef struct ucontext ucontext_t;
+#endif
+
+#if 1
+/* XXX: Not sure how this is used yet (if at all?) */
+
+/* From /usr/include/sys/ucontext.h */
+
+/* Type for general register.  */
+__extension__ typedef long long int greg_t;
+
+/* Number of general registers.  */
+#define NGREG   23
+
+/* Container for all general registers.  */
+typedef greg_t gregset_t[NGREG];
+
+enum {
+  REG_R8 = 0,
+# define REG_R8         REG_R8
+  REG_R9,
+# define REG_R9         REG_R9
+  REG_R10,
+# define REG_R10        REG_R10
+  REG_R11,
+# define REG_R11        REG_R11
+  REG_R12,
+# define REG_R12        REG_R12
+  REG_R13,
+# define REG_R13        REG_R13
+  REG_R14,
+# define REG_R14        REG_R14
+  REG_R15,
+# define REG_R15        REG_R15
+  REG_RDI,
+# define REG_RDI        REG_RDI
+  REG_RSI,
+# define REG_RSI        REG_RSI
+  REG_RBP,
+# define REG_RBP        REG_RBP
+  REG_RBX,
+# define REG_RBX        REG_RBX
+  REG_RDX,
+# define REG_RDX        REG_RDX
+  REG_RAX,
+# define REG_RAX        REG_RAX
+  REG_RCX,
+# define REG_RCX        REG_RCX
+  REG_RSP,
+# define REG_RSP        REG_RSP
+  REG_RIP,
+# define REG_RIP        REG_RIP
+  REG_EFL,
+# define REG_EFL        REG_EFL
+  REG_CSGSFS,           /* Actually short cs, gs, fs, __pad0.  */
+# define REG_CSGSFS     REG_CSGSFS
+  REG_ERR,
+# define REG_ERR        REG_ERR
+  REG_TRAPNO,
+# define REG_TRAPNO     REG_TRAPNO
+  REG_OLDMASK,
+# define REG_OLDMASK    REG_OLDMASK
+  REG_CR2
+# define REG_CR2        REG_CR2
+};
+
+/* Context to describe whole processor state.  */
+typedef struct
+  {
+    gregset_t gregs;
+    /* Note that fpregs is a pointer.  */
+    //fpregset_t fpregs;
+    //__extension__ unsigned long long __reserved1 [8];
+} mcontext_t;
+
+/* From include/uapi/asm-generic/signal.h */
+typedef struct sigaltstack {
+        void __user *ss_sp;
+        int ss_flags;
+        size_t ss_size;
+} stack_t;
+
+/* Userlevel context.  */
+typedef struct ucontext
+  {
+    unsigned long int uc_flags;
+    struct ucontext *uc_link;
+    stack_t uc_stack;
+    mcontext_t uc_mcontext;
+    //__sigset_t uc_sigmask;
+    //struct _libc_fpstate __fpregs_mem;
+  } ucontext_t;
+#endif
+
+#endif
 /* On x86_64, we can directly use ucontext_t as the unwind context.  */
 typedef ucontext_t unw_tdep_context_t;
 

@@ -27,7 +27,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #define _UNWIND_H
 
 /* For uint64_t */
+#ifdef __KERNEL__
+#include <linux/types.h>
+#else
 #include <stdint.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -94,6 +98,10 @@ extern unsigned long _Unwind_GetIPInfo (struct _Unwind_Context *, int *);
 extern void _Unwind_SetIP (struct _Unwind_Context *, unsigned long);
 extern unsigned long _Unwind_GetLanguageSpecificData (struct _Unwind_Context*);
 extern unsigned long _Unwind_GetRegionStart (struct _Unwind_Context *);
+
+#ifdef __KERNEL__
+#define _GNU_SOURCE
+#endif
 
 #ifdef _GNU_SOURCE
 

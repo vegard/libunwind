@@ -44,6 +44,22 @@ struct elf_dyn_info;
 # undef HAVE___THREAD
 #endif
 
+#ifdef __KERNEL__
+#include <uapi/linux/elf.h>
+
+/* From arch/x86/tools/relocs.c */
+#define ElfW(type)              _ElfW(64, type)
+#define _ElfW(bits, type)       __ElfW(bits, type)
+#define __ElfW(bits, type)      Elf##bits##_##type
+
+/* From /usr/include/link.h */
+struct dl_phdr_info {
+    ElfW(Addr) dlpi_addr;
+    const char *dlpi_name;
+    const ElfW(Phdr) *dlpi_phdr;
+    ElfW(Half) dlpi_phnum;
+};
+#else
 #ifndef UNW_REMOTE_ONLY
   #if defined(HAVE_LINK_H)
     #include <link.h>
@@ -53,8 +69,13 @@ struct elf_dyn_info;
     #error Could not find <link.h>
   #endif
 #endif
+#endif
 
+#ifdef __KERNEL__
+#include <linux/mutex.h>
+#else
 #include <pthread.h>
+#endif
 
 /* DWARF expression opcodes.  */
 
@@ -335,7 +356,11 @@ typedef unsigned char unw_hash_index_t;
 
 struct dwarf_rs_cache
   {
+#ifdef __KERNEL__
+	struct mutex lock;
+#else
     pthread_mutex_t lock;
+#endif
     unsigned short lru_head;    /* index of lead-recently used rs */
     unsigned short lru_tail;    /* index of most-recently used rs */
 

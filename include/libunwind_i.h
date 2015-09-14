@@ -46,8 +46,20 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
 /* Platform-independent libunwind-internal declarations.  */
 
+#ifdef __KERNEL__
+#include <linux/types.h>
+#else
 #include <sys/types.h>  /* HP-UX needs this before include of pthread.h */
+#endif
 
+#ifdef __KERNEL__
+#include <linux/bug.h>
+#include <linux/mutex.h>
+#include <linux/printk.h>
+#include <linux/string.h>
+
+#include <libunwind.h>
+#else
 #include <assert.h>
 #include <libunwind.h>
 #include <pthread.h>
@@ -56,7 +68,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#endif
 
+#ifdef __KERNEL__
+#include <linux/elf.h>
+#else
 #if defined(HAVE_ELF_H)
 # include <elf.h>
 #elif defined(HAVE_SYS_ELF_H)
@@ -64,7 +80,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #else
 # error Could not locate <elf.h>
 #endif
+#endif
 
+#ifdef __KERNEL__
+#else
 #if defined(HAVE_ENDIAN_H)
 # include <endian.h>
 #elif defined(HAVE_SYS_ENDIAN_H)
@@ -86,6 +105,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #   error Host has unknown byte-order.
 # endif
 #endif
+#endif
 
 #if defined(HAVE__BUILTIN_UNREACHABLE)
 # define unreachable() __builtin_unreachable()
@@ -104,6 +124,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
    unconditionally and if -lpthread is around, they'll call the
    corresponding routines otherwise, they do nothing.  */
 
+#ifdef __KERNEL__
+#else
 #pragma weak pthread_mutex_init
 #pragma weak pthread_mutex_lock
 #pragma weak pthread_mutex_unlock
@@ -114,6 +136,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
         (pthread_mutex_lock != NULL ? pthread_mutex_lock (l) : 0)
 #define mutex_unlock(l)                                                 \
         (pthread_mutex_unlock != NULL ? pthread_mutex_unlock (l) : 0)
+#endif
 
 #ifdef HAVE_ATOMIC_OPS_H
 # include <atomic_ops.h>
@@ -159,7 +182,9 @@ cmpxchg_ptr (void *addr, void *old, void *new)
 # define HAVE_CMPXCHG
 # define HAVE_FETCH_AND_ADD
 #endif
+#ifndef __KERNEL__
 #define atomic_read(ptr)        (*(ptr))
+#endif
 
 #define UNWI_OBJ(fn)      UNW_PASTE(UNW_PREFIX,UNW_PASTE(I,fn))
 #define UNWI_ARCH_OBJ(fn) UNW_PASTE(UNW_PASTE(UNW_PASTE(_UI,UNW_TARGET),_), fn)
@@ -170,7 +195,11 @@ cmpxchg_ptr (void *addr, void *old, void *new)
    userlevel, preemption is caused by signals and hence sigset_t is
    appropriate.  In constrast, the Linux kernel uses "unsigned long"
    to hold the processor "flags" instead.  */
+#ifdef __KERNEL__
+typedef unsigned long intrmask_t;
+#else
 typedef sigset_t intrmask_t;
+#endif
 
 extern intrmask_t unwi_full_mask;
 
@@ -193,6 +222,17 @@ static inline void mark_as_used(void *v UNUSED) {
 #define UNW_PTHREAD_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
 #endif
 
+#ifdef __KERNEL__
+#define define_lock(name) DEFINE_MUTEX(name)
+#define lock_init(l) mutex_init(l)
+#if 0 /* TODO: Seems to hang; missing init? */
+#define lock_acquire(l,m) mutex_lock(l)
+#define lock_release(l,m) mutex_unlock(l)
+#else
+#define lock_acquire(l,m) do { } while (0)
+#define lock_release(l,m) do { } while (0)
+#endif
+#else
 #define define_lock(name) \
   pthread_mutex_t name = UNW_PTHREAD_MUTEX_INITIALIZER
 #define lock_init(l)            mutex_init (l)
@@ -206,12 +246,16 @@ do {                                            \
   mutex_unlock (l);                             \
   SIGPROCMASK (SIG_SETMASK, &(m), NULL);        \
 } while (0)
+#endif
 
 #define SOS_MEMORY_SIZE 16384   /* see src/mi/mempool.c */
 
 #ifndef MAP_ANONYMOUS
 # define MAP_ANONYMOUS MAP_ANON
 #endif
+#ifdef __KERNEL__
+#define GET_MEMORY(mem, size) do { } while (0)
+#else
 #define GET_MEMORY(mem, size)                                               \
 do {                                                                        \
   /* Hopefully, mmap() goes straight through to a system call stub...  */   \
@@ -220,6 +264,7 @@ do {                                                                        \
   if (mem == MAP_FAILED)                                                    \
     mem = NULL;                                                             \
 } while (0)
+#endif
 
 #define unwi_find_dynamic_proc_info     UNWI_OBJ(find_dynamic_proc_info)
 #define unwi_extract_dynamic_proc_info  UNWI_OBJ(extract_dynamic_proc_info)
@@ -255,12 +300,30 @@ extern void unwi_dyn_remote_put_unwind_info (unw_addr_space_t as,
 extern int unwi_dyn_validate_cache (unw_addr_space_t as, void *arg);
 
 extern unw_dyn_info_list_t _U_dyn_info_list;
+#ifdef __KERNEL__
+extern struct mutex _U_dyn_info_list_lock;
+#else
 extern pthread_mutex_t _U_dyn_info_list_lock;
+#endif
 
 #if UNW_DEBUG
 #define unwi_debug_level                UNWI_ARCH_OBJ(debug_level)
 extern long unwi_debug_level;
 
+#ifdef __KERNEL__
+#include <linux/printk.h>
+# define Debug(level,format,...)                                        \
+do {                                                                    \
+  if (true || unwi_debug_level >= level)                                        \
+    {                                                                   \
+      int _n = level;                                                   \
+      if (_n > 16)                                                      \
+        _n = 16;                                                        \
+      printk (KERN_ERR "%*c>%s: " format, _n, ' ', __FUNCTION__, ##__VA_ARGS__); \
+    }                                                                   \
+} while (0)
+# define Dprintf(format,...) printk (KERN_ERR format, ##__VA_ARGS__)
+#else
 # include <stdio.h>
 # define Debug(level,format...)                                         \
 do {                                                                    \
@@ -274,6 +337,7 @@ do {                                                                    \
     }                                                                   \
 } while (0)
 # define Dprintf(format...)         fprintf (stderr, format)
+#endif
 #else
 # define Debug(level,format...)
 # define Dprintf(format...)
@@ -282,7 +346,12 @@ do {                                                                    \
 static ALWAYS_INLINE int
 print_error (const char *string)
 {
+#ifdef __KERNEL__
+	printk(KERN_ERR "%s\n", string);
+	return strlen(string);
+#else
   return write (2, string, strlen (string));
+#endif
 }
 
 #define mi_init         UNWI_ARCH_OBJ(mi_init)
@@ -313,8 +382,10 @@ struct elf_dyn_info
 
 static inline void invalidate_edi (struct elf_dyn_info *edi)
 {
+#ifndef __KERNEL__
   if (edi->ei.image)
     munmap (edi->ei.image, edi->ei.size);
+#endif
   memset (edi, 0, sizeof (*edi));
   edi->di_cache.format = -1;
   edi->di_debug.format = -1;

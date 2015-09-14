@@ -23,7 +23,14 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
+#ifdef __KERNEL__
+#include <linux/slab.h>
+
+#define calloc(n, size) kcalloc(n, size, GFP_ATOMIC)
+#define free kfree
+#else
 #include <stdlib.h>
+#endif
 
 #include "libunwind_i.h"
 #include "remote.h"

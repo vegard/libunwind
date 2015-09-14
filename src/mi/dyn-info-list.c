@@ -25,7 +25,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
 #include "libunwind_i.h"
 
+#ifndef __KERNEL__
+/* This is also defined in src/x86_64/Ginit.c, I *think* it's because
+ * libunwind compiles to multiple libraries and each library has their
+ * own; however, in the kernel there are no libraries. */
 HIDDEN unw_dyn_info_list_t _U_dyn_info_list;
+#endif
 
 PROTECTED unw_word_t
 _U_dyn_info_list_addr (void)

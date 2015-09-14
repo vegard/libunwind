@@ -24,6 +24,11 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
+#ifdef __KERNEL__
+#include <linux/kernel.h>
+#define getpagesize() PAGE_SIZE
+#endif
+
 #include "libunwind_i.h"
 
 /* From GCC docs: ``Gcc also provides a target specific macro

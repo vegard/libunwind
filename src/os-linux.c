@@ -23,8 +23,12 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
+#ifdef __KERNEL__
+#include <linux/bug.h>
+#else
 #include <limits.h>
 #include <stdio.h>
+#endif
 
 #include "libunwind_i.h"
 #include "os-linux.h"
@@ -34,6 +38,9 @@ tdep_get_elf_image (struct elf_image *ei, pid_t pid, unw_word_t ip,
                     unsigned long *segbase, unsigned long *mapoff,
                     char *path, size_t pathlen)
 {
+#ifdef __KERNEL__
+	BUG();
+#else
   struct map_iterator mi;
   int found = 0, rc;
   unsigned long hi;
@@ -60,4 +67,5 @@ tdep_get_elf_image (struct elf_image *ei, pid_t pid, unw_word_t ip,
   rc = elf_map_image (ei, mi.path);
   maps_close (&mi);
   return rc;
+#endif
 }

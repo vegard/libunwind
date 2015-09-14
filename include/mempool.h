@@ -47,7 +47,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
     no absolute guarantee that unwinding will always work, but in
     practice, this should not be a serious problem.  */
 
+#ifdef __KERNEL__
+#include <linux/mutex.h>
+#else
 #include <sys/types.h>
+#endif
 
 #include "libunwind_i.h"
 
@@ -60,7 +64,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
    declared here only to enable static allocation of mempools.  */
 struct mempool
   {
+#ifdef __KERNEL__
+	struct mutex lock;
+#else
     pthread_mutex_t lock;
+#endif
     size_t obj_size;            /* object size (rounded up for alignment) */
     size_t chunk_size;          /* allocation granularity */
     unsigned int reserve;       /* minimum (desired) size of the free-list */

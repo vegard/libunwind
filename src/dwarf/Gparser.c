@@ -420,6 +420,7 @@ fetch_proc_info (struct dwarf_cursor *c, unw_word_t ip, int need_unwind_info)
      continue, and it's important we get this right, as 'ip' could be
      right at the function entry and hence FDE edge, or at instruction
      that manipulates CFA (push/pop). */
+Debug(0, "use_prev_instr=%d ip=%016lx\n", c->use_prev_instr, ip);
   if (c->use_prev_instr)
     --ip;
 

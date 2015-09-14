@@ -24,8 +24,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
 #include "unwind_i.h"
 #include "ucontext_i.h"
+
+#ifndef __KERNEL__
 #include <signal.h>
 #include <limits.h>
+#endif
 
 #pragma weak pthread_once
 #pragma weak pthread_key_create
@@ -44,6 +47,7 @@ typedef struct
                          been called. */
 } unw_trace_cache_t;
 
+#ifndef __KERNEL__
 static const unw_tdep_frame_t empty_frame = { 0, UNW_X86_64_FRAME_OTHER, -1, -1, 0, -1, -1 };
 static define_lock (trace_init_lock);
 static pthread_once_t trace_cache_once = PTHREAD_ONCE_INIT;
@@ -52,11 +56,15 @@ static pthread_key_t trace_cache_key;
 static struct mempool trace_cache_pool;
 static __thread  unw_trace_cache_t *tls_cache;
 static __thread  int tls_cache_destroyed;
+#endif
 
 /* Free memory for a thread's trace cache. */
 static void
 trace_cache_free (void *arg)
 {
+#ifdef __KERNEL__
+	BUG();
+#else
   unw_trace_cache_t *cache = arg;
   if (++cache->dtor_count < PTHREAD_DESTRUCTOR_ITERATIONS)
   {
@@ -71,20 +79,28 @@ trace_cache_free (void *arg)
   munmap (cache->frames, (1u << cache->log_size) * sizeof(unw_tdep_frame_t));
   mempool_free (&trace_cache_pool, cache);
   Debug(5, "freed cache %p\n", cache);
+#endif
 }
 
 /* Initialise frame tracing for threaded use. */
 static void
 trace_cache_init_once (void)
 {
+#ifdef __KERNEL__
+	BUG();
+#else
   pthread_key_create (&trace_cache_key, &trace_cache_free);
   mempool_init (&trace_cache_pool, sizeof (unw_trace_cache_t), 0);
   trace_cache_once_happen = 1;
+#endif
 }
 
 static unw_tdep_frame_t *
 trace_cache_buckets (size_t n)
 {
+#ifdef __KERNEL__
+	BUG();
+#else
   unw_tdep_frame_t *frames;
   size_t i;
 
@@ -94,6 +110,7 @@ trace_cache_buckets (size_t n)
       frames[i] = empty_frame;
 
   return frames;
+#endif
 }
 
 /* Allocate and initialise hash table for frame cache lookups.
@@ -102,6 +119,9 @@ trace_cache_buckets (size_t n)
 static unw_trace_cache_t *
 trace_cache_create (void)
 {
+#ifdef __KERNEL__
+	BUG();
+#else
   unw_trace_cache_t *cache;
 
   if (tls_cache_destroyed)
@@ -132,6 +152,7 @@ trace_cache_create (void)
   tls_cache_destroyed = 0;  /* Paranoia: should already be 0. */
   Debug(5, "allocated cache %p\n", cache);
   return cache;
+#endif
 }
 
 /* Expand the hash table in the frame cache if possible. This always
@@ -139,6 +160,9 @@ trace_cache_create (void)
 static int
 trace_cache_expand (unw_trace_cache_t *cache)
 {
+#ifdef __KERNEL__
+	BUG();
+#else
   size_t old_size = (1u << cache->log_size);
   size_t new_log_size = cache->log_size + 2;
   unw_tdep_frame_t *new_frames = trace_cache_buckets (1u << new_log_size);
@@ -155,11 +179,15 @@ trace_cache_expand (unw_trace_cache_t *cache)
   cache->log_size = new_log_size;
   cache->used = 0;
   return 0;
+#endif
 }
 
 static unw_trace_cache_t *
 trace_cache_get_unthreaded (void)
 {
+#ifdef __KERNEL__
+	BUG();
+#else
   unw_trace_cache_t *cache;
   intrmask_t saved_mask;
   static unw_trace_cache_t *global_cache = NULL;
@@ -173,12 +201,16 @@ trace_cache_get_unthreaded (void)
   lock_release (&trace_init_lock, saved_mask);
   Debug(5, "using cache %p\n", cache);
   return cache;
+#endif
 }
 
 /* Get the frame cache for the current thread. Create it if there is none. */
 static unw_trace_cache_t *
 trace_cache_get (void)
 {
+#ifdef __KERNEL__
+	BUG();
+#else
   unw_trace_cache_t *cache;
   if (likely (pthread_once != NULL))
   {
@@ -200,6 +232,7 @@ trace_cache_get (void)
   {
     return trace_cache_get_unthreaded();
   }
+#endif
 }
 
 /* Initialise frame properties for address cache slot F at address
@@ -218,6 +251,9 @@ trace_init_addr (unw_tdep_frame_t *f,
                  unw_word_t rbp,
                  unw_word_t rsp)
 {
+#ifdef __KERNEL__
+	BUG();
+#else
   struct cursor *c = (struct cursor *) cursor;
   struct dwarf_cursor *d = &c->dwarf;
   int ret = -UNW_EINVAL;
@@ -263,6 +299,7 @@ trace_init_addr (unw_tdep_frame_t *f,
          f->rbp_cfa_offset, f->rsp_cfa_offset);
 
   return f;
+#endif
 }
 
 /* Look up and if necessary fill in frame attributes for address RIP
@@ -277,6 +314,9 @@ trace_lookup (unw_cursor_t *cursor,
               unw_word_t rbp,
               unw_word_t rsp)
 {
+#ifdef __KERNEL__
+	BUG();
+#else
   /* First look up for previously cached information using cache as
      linear probing hash table with probe step of 1.  Majority of
      lookups should be completed within few steps, but it is very
@@ -328,6 +368,7 @@ trace_lookup (unw_cursor_t *cursor,
     ++cache->used;
 
   return trace_init_addr (frame, cursor, cfa, rip, rbp, rsp);
+#endif
 }
 
 /* Fast stack backtrace for x86-64.
@@ -396,6 +437,9 @@ trace_lookup (unw_cursor_t *cursor,
 HIDDEN int
 tdep_trace (unw_cursor_t *cursor, void **buffer, int *size)
 {
+#ifdef __KERNEL__
+	BUG();
+#else
   struct cursor *c = (struct cursor *) cursor;
   struct dwarf_cursor *d = &c->dwarf;
   unw_trace_cache_t *cache;
@@ -530,4 +574,5 @@ tdep_trace (unw_cursor_t *cursor, void **buffer, int *size)
 #endif
   *size = depth;
   return ret;
+#endif
 }

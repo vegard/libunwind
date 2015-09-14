@@ -26,7 +26,11 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
 #include "unwind_i.h"
+
+#ifdef __KERNEL__
+#else
 #include <signal.h>
+#endif
 
 /* Recognise PLT entries such as:
      3bdf0: ff 25 e2 49 13 00 jmpq   *0x1349e2(%rip)

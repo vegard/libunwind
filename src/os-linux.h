@@ -27,6 +27,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #ifndef os_linux_h
 #define os_linux_h
 
+#ifdef __KERNEL__
+#include <linux/bug.h>
+#endif
+
 struct map_iterator
   {
     off_t offset;
@@ -65,6 +69,9 @@ ltoa (char *buf, long val)
 static inline int
 maps_init (struct map_iterator *mi, pid_t pid)
 {
+#ifdef __KERNEL__
+	BUG();
+#else
   char path[sizeof ("/proc/0123456789/maps")], *cp;
 
   memcpy (path, "/proc/", 6);
@@ -93,6 +100,7 @@ maps_init (struct map_iterator *mi, pid_t pid)
         }
     }
   return -1;
+#endif
 }
 
 static inline char *
@@ -203,6 +211,9 @@ static inline int
 maps_next (struct map_iterator *mi,
            unsigned long *low, unsigned long *high, unsigned long *offset)
 {
+#ifdef __KERNEL__
+	BUG();
+#else
   char perm[16], dash = 0, colon = 0, *cp;
   unsigned long major, minor, inum;
   ssize_t i, nread;
@@ -278,11 +289,15 @@ maps_next (struct map_iterator *mi,
       return 1;
     }
   return 0;
+#endif
 }
 
 static inline void
 maps_close (struct map_iterator *mi)
 {
+#ifdef __KERNEL__
+	BUG();
+#else
   if (mi->fd < 0)
     return;
   close (mi->fd);
@@ -292,6 +307,7 @@ maps_close (struct map_iterator *mi)
       munmap (mi->buf_end - mi->buf_size, mi->buf_size);
       mi->buf = mi->buf_end = NULL;
     }
+#endif
 }
 
 #endif /* os_linux_h */

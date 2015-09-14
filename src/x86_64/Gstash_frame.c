@@ -25,6 +25,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #include "unwind_i.h"
 #include "ucontext_i.h"
 
+#ifdef __KERNEL__
+/* Kernel abs handles longs */
+#define labs abs
+#endif
+
 HIDDEN void
 tdep_stash_frame (struct dwarf_cursor *d, struct dwarf_reg_state *rs)
 {
